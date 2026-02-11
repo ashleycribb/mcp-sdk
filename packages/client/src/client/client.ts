@@ -732,7 +732,6 @@ export class Client<
     async listPrompts(params?: ListPromptsRequest['params'], options?: RequestOptions) {
         if (!this._serverCapabilities?.prompts && !this._enforceStrictCapabilities) {
             // Respect capability negotiation: server does not support prompts
-            console.debug('Client.listPrompts() called but server does not advertise prompts capability - returning empty list');
             return { prompts: [] };
         }
         return this.request({ method: 'prompts/list', params }, ListPromptsResultSchema, options);
@@ -741,7 +740,6 @@ export class Client<
     async listResources(params?: ListResourcesRequest['params'], options?: RequestOptions) {
         if (!this._serverCapabilities?.resources && !this._enforceStrictCapabilities) {
             // Respect capability negotiation: server does not support resources
-            console.debug('Client.listResources() called but server does not advertise resources capability - returning empty list');
             return { resources: [] };
         }
         return this.request({ method: 'resources/list', params }, ListResourcesResultSchema, options);
@@ -750,9 +748,6 @@ export class Client<
     async listResourceTemplates(params?: ListResourceTemplatesRequest['params'], options?: RequestOptions) {
         if (!this._serverCapabilities?.resources && !this._enforceStrictCapabilities) {
             // Respect capability negotiation: server does not support resources
-            console.debug(
-                'Client.listResourceTemplates() called but server does not advertise resources capability - returning empty list'
-            );
             return { resourceTemplates: [] };
         }
         return this.request({ method: 'resources/templates/list', params }, ListResourceTemplatesResultSchema, options);
@@ -881,7 +876,6 @@ export class Client<
     async listTools(params?: ListToolsRequest['params'], options?: RequestOptions) {
         if (!this._serverCapabilities?.tools && !this._enforceStrictCapabilities) {
             // Respect capability negotiation: server does not support tools
-            console.debug('Client.listTools() called but server does not advertise tools capability - returning empty list');
             return { tools: [] };
         }
         const result = await this.request({ method: 'tools/list', params }, ListToolsResultSchema, options);
