@@ -34,7 +34,6 @@ interface ClientInternal<RequestT extends Request> {
         resultSchema: T,
         options?: RequestOptions
     ): AsyncGenerator<ResponseMessage<SchemaOutput<T>>, void, void>;
-    isToolTask(toolName: string): boolean;
     getToolOutputValidator(toolName: string): ((data: unknown) => { valid: boolean; errorMessage?: string }) | undefined;
 }
 
@@ -105,7 +104,7 @@ export class ExperimentalClientTasks<
             ...options,
             // We check if the tool is known to be a task during auto-configuration, but assume
             // the caller knows what they're doing if they pass this explicitly
-            task: options?.task ?? (clientInternal.isToolTask(params.name) ? {} : undefined)
+            task: options?.task ?? (this._client.isToolTask(params.name) ? {} : undefined)
         };
 
         const stream = clientInternal.requestStream({ method: 'tools/call', params }, resultSchema, optionsWithTask);
