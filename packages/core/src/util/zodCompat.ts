@@ -206,9 +206,12 @@ export function getParseErrorMessage(error: unknown): string {
         }
         // Fallback: try to stringify the error
         try {
-            return JSON.stringify(error);
+            const json = JSON.stringify(error);
+            if (json !== '{}') {
+                return json;
+            }
         } catch {
-            return String(error);
+            // ignore
         }
     }
     return String(error);
