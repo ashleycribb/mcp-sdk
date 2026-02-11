@@ -131,7 +131,7 @@ export interface WebStandardStreamableHTTPServerTransportOptions {
 
     /**
      * Enable DNS rebinding protection (requires allowedHosts and/or allowedOrigins to be configured).
-     * Default is false for backwards compatibility.
+     * Default is true.
      * @deprecated Use external middleware for DNS rebinding protection instead.
      */
     enableDnsRebindingProtection?: boolean;
@@ -234,7 +234,7 @@ export class WebStandardStreamableHTTPServerTransport implements Transport {
         this._onsessionclosed = options.onsessionclosed;
         this._allowedHosts = options.allowedHosts;
         this._allowedOrigins = options.allowedOrigins;
-        this._enableDnsRebindingProtection = options.enableDnsRebindingProtection ?? false;
+        this._enableDnsRebindingProtection = options.enableDnsRebindingProtection ?? true;
         this._retryInterval = options.retryInterval;
     }
 
