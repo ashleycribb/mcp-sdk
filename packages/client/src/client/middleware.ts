@@ -120,6 +120,18 @@ export type LoggingOptions = {
     logger?: RequestLogger;
 
     /**
+     * Custom log function for successful requests. Defaults to console.log.
+     * Only used if logger is not provided.
+     */
+    log?: (message: string) => void;
+
+    /**
+     * Custom error function for failed requests. Defaults to console.error.
+     * Only used if logger is not provided.
+     */
+    error?: (message: string) => void;
+
+    /**
      * Whether to include request headers in logs
      * @default false
      */
@@ -156,7 +168,14 @@ export type LoggingOptions = {
  * @returns A fetch middleware function
  */
 export const withLogging = (options: LoggingOptions = {}): Middleware => {
-    const { logger, includeRequestHeaders = false, includeResponseHeaders = false, statusLevel = 0 } = options;
+    const {
+        logger,
+        log = console.log,
+        error: errorLog = console.error,
+        includeRequestHeaders = false,
+        includeResponseHeaders = false,
+        statusLevel = 0
+    } = options;
 
     const defaultLogger: RequestLogger = input => {
         const { method, url, status, statusText, duration, requestHeaders, responseHeaders, error } = input;
@@ -177,11 +196,9 @@ export const withLogging = (options: LoggingOptions = {}): Middleware => {
         }
 
         if (error || status >= 400) {
-            // eslint-disable-next-line no-console
-            console.error(message);
+            errorLog(message);
         } else {
-            // eslint-disable-next-line no-console
-            console.log(message);
+            log(message);
         }
     };
 

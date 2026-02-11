@@ -613,6 +613,41 @@ describe('withLogging', () => {
         const logCall = mockLogger.mock.calls[0]![0];
         expect(logCall.duration).toBeGreaterThanOrEqual(90); // Allow some margin for timing
     });
+
+    it('should use custom log and error functions when provided', async () => {
+        const customLog = vi.fn();
+        const customError = vi.fn();
+
+        // Test successful request
+        const successResponse = new Response('success', { status: 200, statusText: 'OK' });
+        mockFetch.mockResolvedValueOnce(successResponse);
+
+        const enhancedFetch = withLogging({
+            log: customLog,
+            error: customError
+        })(mockFetch);
+
+        await enhancedFetch('https://api.example.com/success');
+
+        expect(customLog).toHaveBeenCalledWith(
+            expect.stringMatching(/HTTP GET https:\/\/api\.example\.com\/success 200 OK \(\d+\.\d+ms\)/)
+        );
+        expect(customError).not.toHaveBeenCalled();
+        expect(consoleLogSpy).not.toHaveBeenCalled();
+        expect(consoleErrorSpy).not.toHaveBeenCalled();
+
+        // Test error response
+        const errorResponse = new Response('Not Found', { status: 404, statusText: 'Not Found' });
+        mockFetch.mockResolvedValueOnce(errorResponse);
+
+        await enhancedFetch('https://api.example.com/error');
+
+        expect(customError).toHaveBeenCalledWith(
+            expect.stringMatching(/HTTP GET https:\/\/api\.example\.com\/error 404 Not Found \(\d+\.\d+ms\)/)
+        );
+        expect(consoleLogSpy).not.toHaveBeenCalled();
+        expect(consoleErrorSpy).not.toHaveBeenCalled();
+    });
 });
 
 describe('applyMiddleware', () => {
