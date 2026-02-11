@@ -828,7 +828,10 @@ export class Client<
         return result;
     }
 
-    private isToolTask(toolName: string): boolean {
+    /**
+     * @internal
+     */
+    public isToolTask(toolName: string): boolean {
         if (!this._serverCapabilities?.tasks?.requests?.tools?.call) {
             return false;
         }
