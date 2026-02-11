@@ -53,8 +53,6 @@ describe('validateToolName', () => {
     describe('warnings for potentially problematic patterns', () => {
         test.each`
             description                               | toolName              | expectedWarning                                                                            | shouldBeValid
-            ${'names with spaces'}                    | ${'get user profile'} | ${'Tool name contains spaces, which may cause parsing issues'}                             | ${false}
-            ${'names with commas'}                    | ${'get,user,profile'} | ${'Tool name contains commas, which may cause parsing issues'}                             | ${false}
             ${'names starting with dash'}             | ${'-get-user'}        | ${'Tool name starts or ends with a dash, which may cause parsing issues in some contexts'} | ${true}
             ${'names ending with dash'}               | ${'get-user-'}        | ${'Tool name starts or ends with a dash, which may cause parsing issues in some contexts'} | ${true}
             ${'names starting with dot'}              | ${'.get.user'}        | ${'Tool name starts or ends with a dot, which may cause parsing issues in some contexts'}  | ${true}
@@ -111,7 +109,7 @@ describe('validateAndWarnToolName', () => {
     test('should include space warning for invalid names with spaces', () => {
         validateAndWarnToolName('get user profile');
         const warningCalls = warnSpy.mock.calls.map(call => call.join(' '));
-        expect(warningCalls.some(call => call.includes('Tool name contains spaces'))).toBe(true);
+        expect(warningCalls.some(call => call.includes('Tool name contains invalid characters: " "'))).toBe(true);
     });
 });
 

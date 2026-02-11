@@ -39,15 +39,6 @@ export function validateToolName(name: string): {
         };
     }
 
-    // Check for specific problematic patterns (these are warnings, not validation failures)
-    if (name.includes(' ')) {
-        warnings.push('Tool name contains spaces, which may cause parsing issues');
-    }
-
-    if (name.includes(',')) {
-        warnings.push('Tool name contains commas, which may cause parsing issues');
-    }
-
     // Check for potentially confusing patterns (leading/trailing dashes, dots, slashes)
     if (name.startsWith('-') || name.endsWith('-')) {
         warnings.push('Tool name starts or ends with a dash, which may cause parsing issues in some contexts');
