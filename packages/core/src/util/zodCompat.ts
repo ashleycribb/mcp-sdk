@@ -205,10 +205,20 @@ export function getParseErrorMessage(error: unknown): string {
             }
         }
         // Fallback: try to stringify the error
-        try {
-            return JSON.stringify(error);
-        } catch {
+        // If it's a standard Error, return its string representation
+        if (error instanceof Error) {
             return String(error);
+        }
+
+        try {
+            const json = JSON.stringify(error);
+            // If the JSON is empty object, it might be a class instance with no enumerable props
+            // In that case, String(error) might be more useful if toString is overridden
+            if (json !== '{}') {
+                return json;
+            }
+        } catch {
+            // If stringify fails (e.g. circular), fall through to String(error)
         }
     }
     return String(error);
