@@ -848,27 +848,38 @@ export class Client<
      * Cache validators for tool output schemas.
      * Called after listTools() to pre-compile validators for better performance.
      */
-    private cacheToolMetadata(tools: Tool[]): void {
-        this._cachedToolOutputValidators.clear();
-        this._cachedKnownTaskTools.clear();
-        this._cachedRequiredTaskTools.clear();
+    private async cacheToolMetadata(tools: Tool[]): Promise<void> {
+        const newValidators = new Map<string, JsonSchemaValidator<unknown>>();
+        const newKnownTaskTools = new Set<string>();
+        const newRequiredTaskTools = new Set<string>();
 
-        for (const tool of tools) {
+        for (let i = 0; i < tools.length; i++) {
+            const tool = tools[i];
+
             // If the tool has an outputSchema, create and cache the validator
             if (tool.outputSchema) {
                 const toolValidator = this._jsonSchemaValidator.getValidator(tool.outputSchema as JsonSchemaType);
-                this._cachedToolOutputValidators.set(tool.name, toolValidator);
+                newValidators.set(tool.name, toolValidator);
             }
 
             // If the tool supports task-based execution, cache that information
             const taskSupport = tool.execution?.taskSupport;
             if (taskSupport === 'required' || taskSupport === 'optional') {
-                this._cachedKnownTaskTools.add(tool.name);
+                newKnownTaskTools.add(tool.name);
             }
             if (taskSupport === 'required') {
-                this._cachedRequiredTaskTools.add(tool.name);
+                newRequiredTaskTools.add(tool.name);
+            }
+
+            // Yield to event loop every 50 items to prevent blocking
+            if (i > 0 && i % 50 === 0) {
+                await new Promise((resolve) => setTimeout(resolve, 0));
             }
         }
+
+        this._cachedToolOutputValidators = newValidators;
+        this._cachedKnownTaskTools = newKnownTaskTools;
+        this._cachedRequiredTaskTools = newRequiredTaskTools;
     }
 
     /**
@@ -887,7 +898,7 @@ export class Client<
         const result = await this.request({ method: 'tools/list', params }, ListToolsResultSchema, options);
 
         // Cache the tools and their output schemas for future validation
-        this.cacheToolMetadata(result.tools);
+        await this.cacheToolMetadata(result.tools);
 
         return result;
     }
