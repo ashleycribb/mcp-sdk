@@ -204,11 +204,20 @@ export function getParseErrorMessage(error: unknown): string {
                 return String(firstIssue.message);
             }
         }
+        // If it is an Error instance, return string representation directly
+        // This avoids JSON.stringify returning "{}"
+        if (error instanceof Error) {
+            return String(error);
+        }
+
         // Fallback: try to stringify the error
         try {
-            return JSON.stringify(error);
+            const json = JSON.stringify(error);
+            if (typeof json === 'string' && json !== '{}') {
+                return json;
+            }
         } catch {
-            return String(error);
+            // ignore
         }
     }
     return String(error);
