@@ -848,27 +848,44 @@ export class Client<
      * Cache validators for tool output schemas.
      * Called after listTools() to pre-compile validators for better performance.
      */
-    private cacheToolMetadata(tools: Tool[]): void {
-        this._cachedToolOutputValidators.clear();
-        this._cachedKnownTaskTools.clear();
-        this._cachedRequiredTaskTools.clear();
+    private async cacheToolMetadata(tools: Tool[]): Promise<void> {
+        // Double buffer updates to avoid race conditions
+        const newValidators = new Map<string, JsonSchemaValidator<unknown>>();
+        const newKnownTaskTools = new Set<string>();
+        const newRequiredTaskTools = new Set<string>();
 
-        for (const tool of tools) {
-            // If the tool has an outputSchema, create and cache the validator
-            if (tool.outputSchema) {
-                const toolValidator = this._jsonSchemaValidator.getValidator(tool.outputSchema as JsonSchemaType);
-                this._cachedToolOutputValidators.set(tool.name, toolValidator);
+        // Process in chunks to avoid blocking event loop
+        const CHUNK_SIZE = 50;
+        for (let i = 0; i < tools.length; i += CHUNK_SIZE) {
+            const chunk = tools.slice(i, i + CHUNK_SIZE);
+
+            for (const tool of chunk) {
+                // If the tool has an outputSchema, create and cache the validator
+                if (tool.outputSchema) {
+                    const toolValidator = this._jsonSchemaValidator.getValidator(tool.outputSchema as JsonSchemaType);
+                    newValidators.set(tool.name, toolValidator);
+                }
+
+                // If the tool supports task-based execution, cache that information
+                const taskSupport = tool.execution?.taskSupport;
+                if (taskSupport === 'required' || taskSupport === 'optional') {
+                    newKnownTaskTools.add(tool.name);
+                }
+                if (taskSupport === 'required') {
+                    newRequiredTaskTools.add(tool.name);
+                }
             }
 
-            // If the tool supports task-based execution, cache that information
-            const taskSupport = tool.execution?.taskSupport;
-            if (taskSupport === 'required' || taskSupport === 'optional') {
-                this._cachedKnownTaskTools.add(tool.name);
-            }
-            if (taskSupport === 'required') {
-                this._cachedRequiredTaskTools.add(tool.name);
+            // Yield to event loop
+            if (i + CHUNK_SIZE < tools.length) {
+                await new Promise(resolve => setTimeout(resolve, 0));
             }
         }
+
+        // Atomically update internal state
+        this._cachedToolOutputValidators = newValidators;
+        this._cachedKnownTaskTools = newKnownTaskTools;
+        this._cachedRequiredTaskTools = newRequiredTaskTools;
     }
 
     /**
@@ -887,7 +904,7 @@ export class Client<
         const result = await this.request({ method: 'tools/list', params }, ListToolsResultSchema, options);
 
         // Cache the tools and their output schemas for future validation
-        this.cacheToolMetadata(result.tools);
+        await this.cacheToolMetadata(result.tools);
 
         return result;
     }
