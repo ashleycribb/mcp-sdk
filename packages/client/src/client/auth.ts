@@ -188,6 +188,13 @@ export interface OAuthClientProvider {
      * }
      */
     prepareTokenRequest?(scope?: string): URLSearchParams | Promise<URLSearchParams | undefined> | undefined;
+
+    /**
+     * Optional method to retrieve the authorization code after a redirect.
+     * This is useful for providers that can capture the code programmatically
+     * (e.g. via a popup, embedded browser, or conformance testing).
+     */
+    getAuthorizationCode?(): string | Promise<string>;
 }
 
 export type AuthResult = 'AUTHORIZED' | 'REDIRECT';
@@ -525,6 +532,20 @@ async function authInternal(
 
     await provider.saveCodeVerifier(codeVerifier);
     await provider.redirectToAuthorization(authorizationUrl);
+
+    if (provider.getAuthorizationCode) {
+        const authorizationCode = await provider.getAuthorizationCode();
+        const tokens = await fetchToken(provider, authorizationServerUrl, {
+            metadata,
+            resource,
+            authorizationCode,
+            fetchFn
+        });
+
+        await provider.saveTokens(tokens);
+        return 'AUTHORIZED';
+    }
+
     return 'REDIRECT';
 }
 
