@@ -22,9 +22,7 @@ export function validateToolName(name: string): {
     isValid: boolean;
     warnings: string[];
 } {
-    const warnings: string[] = [];
-
-    // Check length
+    // 1. Length checks (Fail fast)
     if (name.length === 0) {
         return {
             isValid: false,
@@ -39,7 +37,10 @@ export function validateToolName(name: string): {
         };
     }
 
-    // Check for specific problematic patterns (these are warnings, not validation failures)
+    const warnings: string[] = [];
+    const isValid = TOOL_NAME_REGEX.test(name);
+
+    // 2. Pattern Warnings
     if (name.includes(' ')) {
         warnings.push('Tool name contains spaces, which may cause parsing issues');
     }
@@ -48,7 +49,6 @@ export function validateToolName(name: string): {
         warnings.push('Tool name contains commas, which may cause parsing issues');
     }
 
-    // Check for potentially confusing patterns (leading/trailing dashes, dots, slashes)
     if (name.startsWith('-') || name.endsWith('-')) {
         warnings.push('Tool name starts or ends with a dash, which may cause parsing issues in some contexts');
     }
@@ -57,25 +57,28 @@ export function validateToolName(name: string): {
         warnings.push('Tool name starts or ends with a dot, which may cause parsing issues in some contexts');
     }
 
-    // Check for invalid characters
-    if (!TOOL_NAME_REGEX.test(name)) {
-        const invalidChars = [...name]
-            .filter(char => !/[A-Za-z0-9._-]/.test(char))
-            .filter((char, index, arr) => arr.indexOf(char) === index); // Remove duplicates
-
-        warnings.push(
-            `Tool name contains invalid characters: ${invalidChars.map(c => `"${c}"`).join(', ')}`,
-            'Allowed characters are: A-Z, a-z, 0-9, underscore (_), dash (-), and dot (.)'
-        );
-
+    // 3. Regex Validation
+    if (isValid) {
         return {
-            isValid: false,
+            isValid: true,
             warnings
         };
     }
 
+    // 4. Detailed Failure Analysis (Invalid Chars)
+    const invalidChars = [...name]
+        .filter(char => !/[A-Za-z0-9._-]/.test(char))
+        .filter((char, index, arr) => arr.indexOf(char) === index); // Remove duplicates
+
+    if (invalidChars.length > 0) {
+        warnings.push(
+            `Tool name contains invalid characters: ${invalidChars.map(c => `"${c}"`).join(', ')}`,
+            'Allowed characters are: A-Z, a-z, 0-9, underscore (_), dash (-), and dot (.)'
+        );
+    }
+
     return {
-        isValid: true,
+        isValid: false,
         warnings
     };
 }
