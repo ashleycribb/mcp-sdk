@@ -78,7 +78,7 @@ import { ExperimentalClientTasks } from '../experimental/tasks/client.js';
  * @param schema - The schema to apply defaults to.
  * @param data - The data to apply defaults to.
  */
-function applyElicitationDefaults(schema: JsonSchemaType | undefined, data: unknown): void {
+export function applyElicitationDefaults(schema: JsonSchemaType | undefined, data: unknown): void {
     if (!schema || data === null || typeof data !== 'object') return;
 
     // Handle object properties
@@ -98,22 +98,12 @@ function applyElicitationDefaults(schema: JsonSchemaType | undefined, data: unkn
         }
     }
 
-    if (Array.isArray(schema.anyOf)) {
-        for (const sub of schema.anyOf) {
-            // Skip boolean schemas (true/false are valid JSON Schemas but have no defaults)
-            if (typeof sub !== 'boolean') {
-                applyElicitationDefaults(sub, data);
-            }
-        }
-    }
-
-    // Combine schemas
-    if (Array.isArray(schema.oneOf)) {
-        for (const sub of schema.oneOf) {
-            // Skip boolean schemas (true/false are valid JSON Schemas but have no defaults)
-            if (typeof sub !== 'boolean') {
-                applyElicitationDefaults(sub, data);
-            }
+    // Recurse into anyOf/oneOf schemas
+    const subSchemas = [...(schema.anyOf ?? []), ...(schema.oneOf ?? [])];
+    for (const sub of subSchemas) {
+        // Skip boolean schemas (true/false are valid JSON Schemas but have no defaults)
+        if (typeof sub !== 'boolean') {
+            applyElicitationDefaults(sub, data);
         }
     }
 }
