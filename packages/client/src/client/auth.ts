@@ -909,23 +909,23 @@ export async function discoverAuthorizationServerMetadata(
     // Get the list of URLs to try
     const urlsToTry = buildDiscoveryUrls(authorizationServerUrl);
 
-    // Try each URL in order
-    for (const { url: endpointUrl, type } of urlsToTry) {
+    // Create task factories for each URL
+    const tasks = urlsToTry.map(({ url: endpointUrl, type }) => async () => {
         const response = await fetchWithCorsRetry(endpointUrl, headers, fetchFn);
 
         if (!response) {
             /**
              * CORS error occurred - don't throw as the endpoint may not allow CORS,
-             * continue trying other possible endpoints
+             * continue trying other possible endpoints (return undefined)
              */
-            continue;
+            return undefined;
         }
 
         if (!response.ok) {
             await response.text?.().catch(() => {});
             // Continue looking for any 4xx response code.
             if (response.status >= 400 && response.status < 500) {
-                continue; // Try next URL
+                return undefined; // Try next URL
             }
             throw new Error(
                 `HTTP ${response.status} trying to load ${type === 'oauth' ? 'OAuth' : 'OpenID provider'} metadata from ${endpointUrl}`
@@ -936,9 +936,9 @@ export async function discoverAuthorizationServerMetadata(
         return type === 'oauth'
             ? OAuthMetadataSchema.parse(await response.json())
             : OpenIdProviderDiscoveryMetadataSchema.parse(await response.json());
-    }
+    });
 
-    return undefined;
+    return raceWithDelay(tasks);
 }
 
 /**
@@ -1310,4 +1310,70 @@ export async function registerClient(
     }
 
     return OAuthClientInformationFullSchema.parse(await response.json());
+}
+
+/**
+ * Helper to race multiple tasks with a delay between them (Happy Eyeballs).
+ * Resolves with the first successful result.
+ * If all tasks fail (recoverably), resolves with undefined.
+ * If a task fails fatally, rejects immediately.
+ */
+async function raceWithDelay<T>(
+    tasks: (() => Promise<T | undefined>)[],
+    delayMs: number = 250
+): Promise<T | undefined> {
+    if (tasks.length === 0) return undefined;
+
+    return new Promise((resolve, reject) => {
+        let pending = tasks.length;
+        let resolved = false;
+        const started = new Array(tasks.length).fill(false);
+
+        const scheduleNext = (index: number) => {
+            if (index >= tasks.length) return;
+            if (started[index]) return; // Already started
+
+            started[index] = true;
+            const task = tasks[index];
+            if (!task) return;
+
+            // Schedule next task after delay
+            let nextTimer: ReturnType<typeof setTimeout> | undefined;
+            if (index < tasks.length - 1) {
+                nextTimer = setTimeout(() => {
+                    scheduleNext(index + 1);
+                }, delayMs);
+            }
+
+            task()
+                .then(result => {
+                    if (resolved) return;
+                    if (result !== undefined) {
+                        resolved = true;
+                        if (nextTimer) clearTimeout(nextTimer);
+                        resolve(result);
+                    } else {
+                        pending--;
+                        if (pending === 0) {
+                            resolve(undefined);
+                        } else {
+                            // Task failed (recoverably).
+                            // If we have a pending timer for the next task, cancel it and start immediately.
+                            if (nextTimer) {
+                                clearTimeout(nextTimer);
+                                scheduleNext(index + 1);
+                            }
+                        }
+                    }
+                })
+                .catch(err => {
+                    if (resolved) return;
+                    resolved = true;
+                    if (nextTimer) clearTimeout(nextTimer);
+                    reject(err);
+                });
+        };
+
+        scheduleNext(0);
+    });
 }
