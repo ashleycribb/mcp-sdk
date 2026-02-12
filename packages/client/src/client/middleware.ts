@@ -120,6 +120,16 @@ export type LoggingOptions = {
     logger?: RequestLogger;
 
     /**
+     * Function to use for info/debug logs. Defaults to console.log
+     */
+    log?: (message: string) => void;
+
+    /**
+     * Function to use for error logs. Defaults to console.error
+     */
+    error?: (message: string) => void;
+
+    /**
      * Whether to include request headers in logs
      * @default false
      */
@@ -149,20 +159,29 @@ export type LoggingOptions = {
  * - Does not include request or response headers in logs
  * - Measures and displays request duration in milliseconds
  *
- * Important: the default logger uses both `console.log` and `console.error` so it should not be used with
- * `stdio` transports and applications.
+ * You can customize the logging output by providing `log` and `error` functions,
+ * or by providing a full `logger` implementation.
  *
  * @param options - Logging configuration options
  * @returns A fetch middleware function
  */
 export const withLogging = (options: LoggingOptions = {}): Middleware => {
-    const { logger, includeRequestHeaders = false, includeResponseHeaders = false, statusLevel = 0 } = options;
+    const {
+        logger,
+        // eslint-disable-next-line no-console
+        log = console.log,
+        // eslint-disable-next-line no-console
+        error = console.error,
+        includeRequestHeaders = false,
+        includeResponseHeaders = false,
+        statusLevel = 0
+    } = options;
 
     const defaultLogger: RequestLogger = input => {
-        const { method, url, status, statusText, duration, requestHeaders, responseHeaders, error } = input;
+        const { method, url, status, statusText, duration, requestHeaders, responseHeaders, error: reqError } = input;
 
-        let message = error
-            ? `HTTP ${method} ${url} failed: ${error.message} (${duration}ms)`
+        let message = reqError
+            ? `HTTP ${method} ${url} failed: ${reqError.message} (${duration}ms)`
             : `HTTP ${method} ${url} ${status} ${statusText} (${duration}ms)`;
 
         // Add headers to message if requested
@@ -176,12 +195,10 @@ export const withLogging = (options: LoggingOptions = {}): Middleware => {
             message += `\n  Response Headers: {${resHeaders}}`;
         }
 
-        if (error || status >= 400) {
-            // eslint-disable-next-line no-console
-            console.error(message);
+        if (reqError || status >= 400) {
+            error(message);
         } else {
-            // eslint-disable-next-line no-console
-            console.log(message);
+            log(message);
         }
     };
 
