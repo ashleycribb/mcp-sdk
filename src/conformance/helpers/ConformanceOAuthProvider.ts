@@ -80,6 +80,10 @@ export class ConformanceOAuthProvider implements OAuthClientProvider {
         throw new Error('No authorization code');
     }
 
+    async getAuthorizationCode(): Promise<string> {
+        return this.getAuthCode();
+    }
+
     saveCodeVerifier(codeVerifier: string): void {
         this._codeVerifier = codeVerifier;
     }

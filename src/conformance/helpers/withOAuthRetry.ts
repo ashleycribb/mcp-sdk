@@ -17,25 +17,8 @@ export const handle401 = async (
     });
 
     if (result === 'REDIRECT') {
-        // Ordinarily, we'd wait for the callback to be handled here,
-        // but in our conformance provider, we get the authorization code
-        // during the redirect handling, so we can go straight to
-        // retrying the auth step.
-        // await provider.waitForCallback();
-
-        const authorizationCode = await provider.getAuthCode();
-
-        // TODO: this retry logic should be incorporated into the typescript SDK
-        result = await auth(provider, {
-            serverUrl,
-            resourceMetadataUrl,
-            scope,
-            authorizationCode,
-            fetchFn: next
-        });
-        if (result !== 'AUTHORIZED') {
-            throw new UnauthorizedError(`Authentication failed with result: ${result}`);
-        }
+        // The retry logic is now handled within auth() via provider.getAuthorizationCode()
+        throw new UnauthorizedError('Authentication requires user authorization - redirect initiated');
     }
 };
 /**
