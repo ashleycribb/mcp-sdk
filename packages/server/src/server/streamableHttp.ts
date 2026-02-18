@@ -733,20 +733,21 @@ export class WebStandardStreamableHTTPServerTransport implements Transport {
 
             // Store the response for this request to send messages back through this connection
             // We need to track by request ID to maintain the connection
+            this._streamMapping.set(streamId, {
+                controller: streamController!,
+                encoder,
+                cleanup: () => {
+                    this._streamMapping.delete(streamId);
+                    try {
+                        streamController!.close();
+                    } catch {
+                        // Controller might already be closed
+                    }
+                }
+            });
+
             for (const message of messages) {
                 if (isJSONRPCRequest(message)) {
-                    this._streamMapping.set(streamId, {
-                        controller: streamController!,
-                        encoder,
-                        cleanup: () => {
-                            this._streamMapping.delete(streamId);
-                            try {
-                                streamController!.close();
-                            } catch {
-                                // Controller might already be closed
-                            }
-                        }
-                    });
                     this._requestToStreamMapping.set(message.id, streamId);
                 }
             }
