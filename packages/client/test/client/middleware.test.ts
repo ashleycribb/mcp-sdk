@@ -1055,7 +1055,6 @@ describe('createMiddleware', () => {
                 return await next(input, init);
             } catch (error) {
                 // Retry once on network error
-                console.log('Retrying request after error:', error);
                 return await next(input, init);
             }
         });
@@ -1079,10 +1078,7 @@ describe('createMiddleware', () => {
         });
 
         const customLogging = createMiddleware(async (next, input, init) => {
-            const url = typeof input === 'string' ? input : input.toString();
-            console.log(`Request to: ${url}`);
             const response = await next(input, init);
-            console.log(`Response status: ${response.status}`);
             return response;
         });
 
