@@ -267,10 +267,8 @@ export class McpServer {
             return undefined as Args;
         }
 
-        // Try to normalize to object schema first (for raw shapes and object schemas)
-        // If that fails, use the schema directly (for union/intersection/etc)
-        const inputObj = normalizeObjectSchema(tool.inputSchema);
-        const schemaToParse = inputObj ?? (tool.inputSchema as AnySchema);
+        // Use the pre-calculated parsed input schema if available, otherwise fallback to the raw schema
+        const schemaToParse = tool.parsedInputSchema ?? (tool.inputSchema as AnySchema);
         const parseResult = await safeParseAsync(schemaToParse, args ?? {});
         if (!parseResult.success) {
             const error = 'error' in parseResult ? parseResult.error : 'Unknown error';
@@ -813,10 +811,14 @@ export class McpServer {
         // Validate tool name according to SEP specification
         validateAndWarnToolName(name);
 
+        const inputSchemaObj = getZodSchemaObject(inputSchema);
+        const parsedInputSchema = inputSchemaObj ? (normalizeObjectSchema(inputSchemaObj) ?? inputSchemaObj) : undefined;
+
         const registeredTool: RegisteredTool = {
             title,
             description,
-            inputSchema: getZodSchemaObject(inputSchema),
+            inputSchema: inputSchemaObj,
+            parsedInputSchema,
             outputSchema: getZodSchemaObject(outputSchema),
             annotations,
             execution,
@@ -836,7 +838,10 @@ export class McpServer {
                 }
                 if (updates.title !== undefined) registeredTool.title = updates.title;
                 if (updates.description !== undefined) registeredTool.description = updates.description;
-                if (updates.paramsSchema !== undefined) registeredTool.inputSchema = objectFromShape(updates.paramsSchema);
+                if (updates.paramsSchema !== undefined) {
+                    registeredTool.inputSchema = objectFromShape(updates.paramsSchema);
+                    registeredTool.parsedInputSchema = registeredTool.inputSchema;
+                }
                 if (updates.outputSchema !== undefined) registeredTool.outputSchema = objectFromShape(updates.outputSchema);
                 if (updates.callback !== undefined) registeredTool.handler = updates.callback;
                 if (updates.annotations !== undefined) registeredTool.annotations = updates.annotations;
@@ -1058,6 +1063,7 @@ export type RegisteredTool = {
     title?: string;
     description?: string;
     inputSchema?: AnySchema;
+    parsedInputSchema?: AnySchema;
     outputSchema?: AnySchema;
     annotations?: ToolAnnotations;
     execution?: ToolExecution;
