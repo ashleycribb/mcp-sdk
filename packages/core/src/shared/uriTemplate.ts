@@ -4,7 +4,8 @@ export type Variables = Record<string, string | string[]>;
 
 const MAX_TEMPLATE_LENGTH = 1_000_000; // 1MB
 const MAX_VARIABLE_LENGTH = 1_000_000; // 1MB
-const MAX_TEMPLATE_EXPRESSIONS = 10_000;
+const MAX_URI_LENGTH = 16_384; // 16KB
+const MAX_TEMPLATE_EXPRESSIONS = 50;
 const MAX_REGEX_LENGTH = 1_000_000; // 1MB
 
 export class UriTemplate {
@@ -253,7 +254,35 @@ export class UriTemplate {
     }
 
     match(uri: string): Variables | null {
-        UriTemplate.validateLength(uri, MAX_TEMPLATE_LENGTH, 'URI');
+        UriTemplate.validateLength(uri, MAX_URI_LENGTH, 'URI');
+
+        let greedyCount = 0;
+        for (let i = 0; i < this.parts.length; i++) {
+            const part = this.parts[i];
+            if (typeof part !== 'string') {
+                if (part.operator === '+' || part.operator === '#') {
+                    greedyCount++;
+                } else {
+                    // Check if followed by a separator literal
+                    let isSafe = false;
+                    if (i + 1 < this.parts.length) {
+                        const nextPart = this.parts[i + 1];
+                        if (typeof nextPart === 'string' && (nextPart.startsWith('/') || nextPart.startsWith(','))) {
+                            isSafe = true;
+                        }
+                    }
+
+                    if (!isSafe) {
+                        greedyCount++;
+                    }
+                }
+            }
+        }
+
+        if (greedyCount > 2) {
+            throw new Error('Template is too complex for matching (max 2 greedy expressions)');
+        }
+
         let pattern = '^';
         const names: Array<{ name: string; exploded: boolean }> = [];
 
