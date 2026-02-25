@@ -594,8 +594,36 @@ describe('withLogging', () => {
             headers: { Authorization: 'Bearer token' }
         });
 
-        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Request Headers: {authorization: Bearer token}'));
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Request Headers: {authorization: [REDACTED]}'));
         expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Response Headers: {content-type: application/json}'));
+    });
+
+    it('should redact sensitive headers', async () => {
+        const response = new Response('success', {
+            status: 200,
+            statusText: 'OK',
+            headers: {
+                'Set-Cookie': 'session=secret',
+                'Content-Type': 'application/json'
+            }
+        });
+        mockFetch.mockResolvedValue(response);
+
+        const enhancedFetch = withLogging({
+            includeRequestHeaders: true,
+            includeResponseHeaders: true
+        })(mockFetch);
+
+        await enhancedFetch('https://api.example.com/data', {
+            headers: {
+                'Authorization': 'Bearer token',
+                'Cookie': 'id=123',
+                'X-Custom': 'visible'
+            }
+        });
+
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Request Headers: {authorization: [REDACTED], cookie: [REDACTED], x-custom: visible}'));
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Response Headers: {content-type: application/json, set-cookie: [REDACTED]}'));
     });
 
     it('should measure request duration accurately', async () => {
