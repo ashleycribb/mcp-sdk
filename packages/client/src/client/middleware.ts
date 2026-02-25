@@ -110,6 +110,8 @@ export type RequestLogger = (input: {
     error?: Error;
 }) => void;
 
+const SENSITIVE_HEADERS = new Set(['authorization', 'cookie', 'set-cookie']);
+
 /**
  * Configuration options for the logging middleware
  */
@@ -167,12 +169,16 @@ export const withLogging = (options: LoggingOptions = {}): Middleware => {
 
         // Add headers to message if requested
         if (includeRequestHeaders && requestHeaders) {
-            const reqHeaders = [...requestHeaders.entries()].map(([key, value]) => `${key}: ${value}`).join(', ');
+            const reqHeaders = [...requestHeaders.entries()]
+                .map(([key, value]) => `${key}: ${SENSITIVE_HEADERS.has(key.toLowerCase()) ? '[REDACTED]' : value}`)
+                .join(', ');
             message += `\n  Request Headers: {${reqHeaders}}`;
         }
 
         if (includeResponseHeaders && responseHeaders) {
-            const resHeaders = [...responseHeaders.entries()].map(([key, value]) => `${key}: ${value}`).join(', ');
+            const resHeaders = [...responseHeaders.entries()]
+                .map(([key, value]) => `${key}: ${SENSITIVE_HEADERS.has(key.toLowerCase()) ? '[REDACTED]' : value}`)
+                .join(', ');
             message += `\n  Response Headers: {${resHeaders}}`;
         }
 
