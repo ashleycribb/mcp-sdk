@@ -1,4 +1,5 @@
 import * as z from 'zod/v4';
+import { JSONRPC_VERSION } from './spec.types.js';
 
 export const LATEST_PROTOCOL_VERSION = '2025-11-25';
 export const DEFAULT_NEGOTIATED_PROTOCOL_VERSION = '2025-03-26';
@@ -7,7 +8,7 @@ export const SUPPORTED_PROTOCOL_VERSIONS = [LATEST_PROTOCOL_VERSION, '2025-06-18
 export const RELATED_TASK_META_KEY = 'io.modelcontextprotocol/related-task';
 
 /* JSON-RPC types */
-export const JSONRPC_VERSION = '2.0';
+export { JSONRPC_VERSION };
 
 /**
  * Information about a validated access token, provided to request handlers.
