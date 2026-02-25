@@ -26,6 +26,7 @@ export class UriTemplate {
     }
     private readonly template: string;
     private readonly parts: Array<string | { name: string; operator: string; names: string[]; exploded: boolean }>;
+    private matcher?: { regex: RegExp; names: Array<{ name: string; exploded: boolean }> };
 
     get variableNames(): string[] {
         return this.parts.flatMap(part => (typeof part === 'string' ? [] : part.names));
@@ -254,30 +255,37 @@ export class UriTemplate {
 
     match(uri: string): Variables | null {
         UriTemplate.validateLength(uri, MAX_TEMPLATE_LENGTH, 'URI');
-        let pattern = '^';
-        const names: Array<{ name: string; exploded: boolean }> = [];
 
-        for (const part of this.parts) {
-            if (typeof part === 'string') {
-                pattern += this.escapeRegExp(part);
-            } else {
-                const patterns = this.partToRegExp(part);
-                for (const { pattern: partPattern, name } of patterns) {
-                    pattern += partPattern;
-                    names.push({ name, exploded: part.exploded });
+        if (!this.matcher) {
+            let pattern = '^';
+            const names: Array<{ name: string; exploded: boolean }> = [];
+
+            for (const part of this.parts) {
+                if (typeof part === 'string') {
+                    pattern += this.escapeRegExp(part);
+                } else {
+                    const patterns = this.partToRegExp(part);
+                    for (const { pattern: partPattern, name } of patterns) {
+                        pattern += partPattern;
+                        names.push({ name, exploded: part.exploded });
+                    }
                 }
             }
+
+            pattern += '$';
+            UriTemplate.validateLength(pattern, MAX_REGEX_LENGTH, 'Generated regex pattern');
+            this.matcher = {
+                regex: new RegExp(pattern),
+                names,
+            };
         }
 
-        pattern += '$';
-        UriTemplate.validateLength(pattern, MAX_REGEX_LENGTH, 'Generated regex pattern');
-        const regex = new RegExp(pattern);
-        const match = uri.match(regex);
+        const match = uri.match(this.matcher.regex);
 
         if (!match) return null;
 
         const result: Variables = {};
-        for (const [i, name_] of names.entries()) {
+        for (const [i, name_] of this.matcher.names.entries()) {
             const { name, exploded } = name_!;
             const value = match[i + 1]!;
             const cleanName = name.replace('*', '');
