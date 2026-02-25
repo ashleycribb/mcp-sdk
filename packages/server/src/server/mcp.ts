@@ -267,11 +267,8 @@ export class McpServer {
             return undefined as Args;
         }
 
-        // Try to normalize to object schema first (for raw shapes and object schemas)
-        // If that fails, use the schema directly (for union/intersection/etc)
-        const inputObj = normalizeObjectSchema(tool.inputSchema);
-        const schemaToParse = inputObj ?? (tool.inputSchema as AnySchema);
-        const parseResult = await safeParseAsync(schemaToParse, args ?? {});
+        // _schemaToParse is guaranteed to be set if inputSchema is set
+        const parseResult = await safeParseAsync(tool._schemaToParse!, args ?? {});
         if (!parseResult.success) {
             const error = 'error' in parseResult ? parseResult.error : 'Unknown error';
             const errorMessage = getParseErrorMessage(error);
@@ -813,15 +810,22 @@ export class McpServer {
         // Validate tool name according to SEP specification
         validateAndWarnToolName(name);
 
+        const actualInputSchema = getZodSchemaObject(inputSchema);
+
         const registeredTool: RegisteredTool = {
             title,
             description,
-            inputSchema: getZodSchemaObject(inputSchema),
+            inputSchema: actualInputSchema,
             outputSchema: getZodSchemaObject(outputSchema),
             annotations,
             execution,
             _meta,
             handler: handler,
+            _schemaToParse: (() => {
+                if (!actualInputSchema) return undefined;
+                const obj = normalizeObjectSchema(actualInputSchema);
+                return obj ?? (actualInputSchema as AnySchema);
+            })(),
             enabled: true,
             disable: () => registeredTool.update({ enabled: false }),
             enable: () => registeredTool.update({ enabled: true }),
@@ -836,7 +840,12 @@ export class McpServer {
                 }
                 if (updates.title !== undefined) registeredTool.title = updates.title;
                 if (updates.description !== undefined) registeredTool.description = updates.description;
-                if (updates.paramsSchema !== undefined) registeredTool.inputSchema = objectFromShape(updates.paramsSchema);
+                if (updates.paramsSchema !== undefined) {
+                    const newSchema = objectFromShape(updates.paramsSchema);
+                    registeredTool.inputSchema = newSchema;
+                    const obj = normalizeObjectSchema(newSchema);
+                    registeredTool._schemaToParse = obj ?? (newSchema as AnySchema);
+                }
                 if (updates.outputSchema !== undefined) registeredTool.outputSchema = objectFromShape(updates.outputSchema);
                 if (updates.callback !== undefined) registeredTool.handler = updates.callback;
                 if (updates.annotations !== undefined) registeredTool.annotations = updates.annotations;
@@ -1063,6 +1072,7 @@ export type RegisteredTool = {
     execution?: ToolExecution;
     _meta?: Record<string, unknown>;
     handler: AnyToolHandler<undefined | ZodRawShapeCompat>;
+    _schemaToParse?: AnySchema;
     enabled: boolean;
     enable(): void;
     disable(): void;
