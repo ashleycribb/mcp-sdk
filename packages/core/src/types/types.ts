@@ -2475,8 +2475,9 @@ export type ResourceContents = Infer<typeof ResourceContentsSchema>;
 export type TextResourceContents = Infer<typeof TextResourceContentsSchema>;
 export type BlobResourceContents = Infer<typeof BlobResourceContentsSchema>;
 export type Resource = Infer<typeof ResourceSchema>;
-// TODO: Overlaps with exported `ResourceTemplate` class from `server`.
-export type ResourceTemplateType = Infer<typeof ResourceTemplateSchema>;
+export type ResourceTemplate = Infer<typeof ResourceTemplateSchema>;
+/** @deprecated Use ResourceTemplate instead */
+export type ResourceTemplateType = ResourceTemplate;
 export type ListResourcesRequest = Infer<typeof ListResourcesRequestSchema>;
 export type ListResourcesResult = Infer<typeof ListResourcesResultSchema>;
 export type ListResourceTemplatesRequest = Infer<typeof ListResourceTemplatesRequestSchema>;

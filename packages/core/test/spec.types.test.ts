@@ -419,7 +419,7 @@ const sdkTypeChecks = {
         sdk = spec;
         spec = sdk;
     },
-    ResourceTemplate: (sdk: SDKTypes.ResourceTemplateType, spec: SpecTypes.ResourceTemplate) => {
+    ResourceTemplate: (sdk: SDKTypes.ResourceTemplate, spec: SpecTypes.ResourceTemplate) => {
         sdk = spec;
         spec = sdk;
     },
