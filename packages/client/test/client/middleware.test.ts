@@ -591,10 +591,16 @@ describe('withLogging', () => {
         })(mockFetch);
 
         await enhancedFetch('https://api.example.com/data', {
-            headers: { Authorization: 'Bearer token' }
+            headers: {
+                Authorization: 'Bearer token',
+                'X-Custom': 'value'
+            }
         });
 
-        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Request Headers: {authorization: Bearer token}'));
+        // Should redact sensitive headers
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('authorization: [REDACTED]'));
+        // Should include non-sensitive headers
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('x-custom: value'));
         expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Response Headers: {content-type: application/json}'));
     });
 
