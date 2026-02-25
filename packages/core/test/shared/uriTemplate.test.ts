@@ -199,15 +199,21 @@ describe('UriTemplate', () => {
     });
 
     describe('security and edge cases', () => {
-        it('should handle extremely long input strings', () => {
-            const longString = 'x'.repeat(100_000);
+        it('should handle long input strings (within limits)', () => {
+            const longString = 'x'.repeat(10_000);
             const template = new UriTemplate(`/api/{param}`);
             expect(template.expand({ param: longString })).toBe(`/api/${longString}`);
             expect(template.match(`/api/${longString}`)).toEqual({ param: longString });
         });
 
-        it('should handle deeply nested template expressions', () => {
-            const template = new UriTemplate('{a}{b}{c}{d}{e}{f}{g}{h}{i}{j}'.repeat(1000));
+        it('should throw for extremely long input strings', () => {
+            const longString = 'x'.repeat(20_000);
+            const template = new UriTemplate(`/api/{param}`);
+            expect(() => template.match(`/api/${longString}`)).toThrow();
+        });
+
+        it('should handle nested template expressions (within limits)', () => {
+            const template = new UriTemplate('{a}{b}{c}{d}{e}{f}{g}{h}{i}{j}'.repeat(4)); // 40 expressions
             expect(() =>
                 template.expand({
                     a: '1',
@@ -224,6 +230,10 @@ describe('UriTemplate', () => {
             ).not.toThrow();
         });
 
+        it('should throw for too many template expressions', () => {
+             expect(() => new UriTemplate('{a}'.repeat(51))).toThrow(/Template contains too many expressions/);
+        });
+
         it('should handle malformed template expressions', () => {
             expect(() => new UriTemplate('{unclosed')).toThrow();
             expect(() => new UriTemplate('{}')).not.toThrow();
@@ -231,10 +241,10 @@ describe('UriTemplate', () => {
             expect(() => new UriTemplate('{a}{')).toThrow();
         });
 
-        it('should handle pathological regex patterns', () => {
+        it('should handle pathological regex patterns (within length limits)', () => {
             const template = new UriTemplate('/api/{param}');
             // Create a string that could cause catastrophic backtracking
-            const input = '/api/' + 'a'.repeat(100_000);
+            const input = '/api/' + 'a'.repeat(10_000);
             expect(() => template.match(input)).not.toThrow();
         });
 
@@ -271,10 +281,10 @@ describe('UriTemplate', () => {
             expect(template.variableNames).toEqual(['a', 'b']);
         });
 
-        it('should handle maximum template expression limit', () => {
+        it('should enforce maximum template expression limit', () => {
             // Create a template with many expressions
-            const expressions = Array.from({ length: 10_000 }).fill('{param}').join('');
-            expect(() => new UriTemplate(expressions)).not.toThrow();
+            const expressions = Array.from({ length: 51 }).fill('{param}').join('');
+            expect(() => new UriTemplate(expressions)).toThrow(/Template contains too many expressions/);
         });
 
         it('should handle maximum variable name length', () => {
