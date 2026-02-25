@@ -594,7 +594,7 @@ describe('withLogging', () => {
             headers: { Authorization: 'Bearer token' }
         });
 
-        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Request Headers: {authorization: Bearer token}'));
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Request Headers: {authorization: [REDACTED]}'));
         expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Response Headers: {content-type: application/json}'));
     });
 

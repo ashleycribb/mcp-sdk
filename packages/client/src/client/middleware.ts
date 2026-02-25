@@ -165,15 +165,22 @@ export const withLogging = (options: LoggingOptions = {}): Middleware => {
             ? `HTTP ${method} ${url} failed: ${error.message} (${duration}ms)`
             : `HTTP ${method} ${url} ${status} ${statusText} (${duration}ms)`;
 
+        const formatHeaders = (headers: Headers) => {
+            return [...headers.entries()]
+                .map(([key, value]) => {
+                    const isSensitive = ['authorization', 'cookie', 'set-cookie'].includes(key.toLowerCase());
+                    return `${key}: ${isSensitive ? '[REDACTED]' : value}`;
+                })
+                .join(', ');
+        };
+
         // Add headers to message if requested
         if (includeRequestHeaders && requestHeaders) {
-            const reqHeaders = [...requestHeaders.entries()].map(([key, value]) => `${key}: ${value}`).join(', ');
-            message += `\n  Request Headers: {${reqHeaders}}`;
+            message += `\n  Request Headers: {${formatHeaders(requestHeaders)}}`;
         }
 
         if (includeResponseHeaders && responseHeaders) {
-            const resHeaders = [...responseHeaders.entries()].map(([key, value]) => `${key}: ${value}`).join(', ');
-            message += `\n  Response Headers: {${resHeaders}}`;
+            message += `\n  Response Headers: {${formatHeaders(responseHeaders)}}`;
         }
 
         if (error || status >= 400) {
