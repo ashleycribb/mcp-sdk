@@ -40,7 +40,7 @@ export function createPrivateKeyJwtAuth(options: {
         const lifetimeSeconds = options.lifetimeSeconds ?? 300;
 
         const now = Math.floor(Date.now() / 1000);
-        const jti = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const jti = globalThis.crypto.randomUUID();
 
         const baseClaims = {
             iss: options.issuer,
