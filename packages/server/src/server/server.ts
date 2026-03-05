@@ -553,12 +553,31 @@ export class Server<
                 }
             }
             if (hasPreviousToolUse) {
-                const toolUseIds = new Set(previousContent.filter(c => c.type === 'tool_use').map(c => (c as ToolUseContent).id));
-                const toolResultIds = new Set(
-                    lastContent.filter(c => c.type === 'tool_result').map(c => (c as ToolResultContent).toolUseId)
-                );
-                if (toolUseIds.size !== toolResultIds.size || ![...toolUseIds].every(id => toolResultIds.has(id))) {
-                    throw new Error('ids of tool_result blocks and tool_use blocks from previous message do not match');
+                const toolUseIds = new Set<string>();
+                for (const c of previousContent) {
+                    if (c.type === 'tool_use') {
+                        toolUseIds.add((c as ToolUseContent).id);
+                    }
+                }
+                const toolResultIds = new Set<string>();
+                for (const c of lastContent) {
+                    if (c.type === 'tool_result') {
+                        toolResultIds.add((c as ToolResultContent).toolUseId);
+                    }
+                }
+
+                if (toolUseIds.size !== toolResultIds.size) {
+                    throw new Error(
+                        'ids of tool_result blocks and tool_use blocks from previous message do not match'
+                    );
+                }
+
+                for (const id of toolUseIds) {
+                    if (!toolResultIds.has(id)) {
+                        throw new Error(
+                            'ids of tool_result blocks and tool_use blocks from previous message do not match'
+                        );
+                    }
                 }
             }
         }
