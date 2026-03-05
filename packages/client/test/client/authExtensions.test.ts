@@ -279,6 +279,21 @@ describe('createPrivateKeyJwtAuth', () => {
         expect(payload.aud).toBe('https://issuer.example.com');
     });
 
+    it('generates a secure UUID for the jti claim', async () => {
+        const addClientAuth = createPrivateKeyJwtAuth(baseOptions);
+
+        const params = new URLSearchParams();
+        await addClientAuth(new Headers(), params, 'https://auth.example.com/token', undefined);
+
+        const assertion = params.get('client_assertion')!;
+        const [, payloadB64] = assertion.split('.');
+        const payload = JSON.parse(Buffer.from(payloadB64!, 'base64url').toString());
+
+        // Verify jti is a valid UUID (v4)
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        expect(payload.jti).toMatch(uuidRegex);
+    });
+
     it('throws when using an unsupported algorithm', async () => {
         const addClientAuth = createPrivateKeyJwtAuth({
             issuer: 'client-id',
